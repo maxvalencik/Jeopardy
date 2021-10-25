@@ -37,22 +37,18 @@ async function getCategoryIds() {
 
     //Look up for 'numberCat' number of different categories
     let i = 0;
-    try{
-        while(i < numberCat){
-            //send request to API
-            const res = await axios.get('http://jservice.io/api/random');
-            //extract ID of category
-            let catID = res.data[0].category_id;
-            //test if ID already in array - could also use a set instead
-            let existingID = categoriesID.find((id) => id === catID);
-            //if catID does not already exist in array, push it
-            if (existingID === undefined){
-                categoriesID.push(catID);
-                i++;
-            }
+    while(i < numberCat){
+        //send request to API
+        const res = await axios.get('http://jservice.io/api/random');
+        //extract ID of category
+         let catID = res.data[0].category_id;
+         //test if ID already in array - could also use a set instead
+        let existingID = categoriesID.find((id) => id === catID);
+         //if catID does not already exist in array, push it
+         if (existingID === undefined){
+             categoriesID.push(catID);
+            i++;
         }
-    } catch(e){
-        alert("Something went wrong...try again later!");
     }
     return categoriesID;
 }
@@ -84,45 +80,40 @@ async function getCategory(catId) {
 
     //Request all the clues for a category
     //get request to API
-    try{
-        const res = await axios.get(`https://jservice.io/api/clues?category=${catId}`);
+    const res = await axios.get(`https://jservice.io/api/clues?category=${catId}`);
 
-        //length of data returned (clues)
-        const lengthData = res.data.length;
+    //length of data returned (clues)
+    const lengthData = res.data.length;
     
-        while (numbers.size < 5){ 
-            //Generate unique random numbers within data range
-            let randomNumber = Math.floor(Math.random() * lengthData);
-            //added to the set if unique
-            numbers.add(randomNumber);
-        }
-        
-        //Extract clues data using the set of random numbers to pick random clues in category
-        for (let n of numbers){
-            //extract title of category
-            title = res.data[n].category.title;
-            //Object clue
-            const clue = {};
-            //extract question
-            let question = res.data[n].question;
-            //extract answer
-            let answer = res.data[n].answer;
-            //Assign values to clue
-            clue.question = question;
-            clue.answer = answer;
-            clue.showing = null;
-            //push clue to clues array
-            clues.push(clue);
-        }      
-
-        //create the category object with title and clues to return 
-        category.title = title;
-        category.clues = clues;
-        return category;
-    } catch(e){
-        alert ("Something went wrong...try again later!");
+    while (numbers.size < 5){ 
+        //Generate unique random numbers within data range
+        let randomNumber = Math.floor(Math.random() * lengthData);
+        //added to the set if unique
+        numbers.add(randomNumber);
     }
+        
+    //Extract clues data using the set of random numbers to pick random clues in category
+    for (let n of numbers){
+         //extract title of category
+        title = res.data[n].category.title;
+        //Object clue
+        const clue = {};
+        //extract question
+        let question = res.data[n].question;
+        //extract answer
+        let answer = res.data[n].answer;
+        //Assign values to clue
+        clue.question = question;
+        clue.answer = answer;
+        clue.showing = null;
+        //push clue to clues array
+        clues.push(clue);
+    }      
 
+    //create the category object with title and clues to return 
+    category.title = title;
+    category.clues = clues;
+    return category;
 }
 
 
@@ -229,18 +220,23 @@ function hideLoadingView() {
 
 async function setupAndStart() {
 
-    //Loading view while waiting for requests to proceed
-    showLoadingView();
+    try{
+        //Loading view while waiting for requests to proceed
+        showLoadingView();
 
-    //Get random categories IDs
-    const categoriesID = await getCategoryIds();
+        //Get random categories IDs
+        const categoriesID = await getCategoryIds();
 
-    //Add each category with clues/title to the categories array
-    for (let catID of categoriesID){
-        let category = await getCategory(catID);
-        //add to categorie array
-        categories.push(category);
-    };
+        //Add each category with clues/title to the categories array
+        for (let catID of categoriesID){
+            let category = await getCategory(catID);
+            //add to categorie array
+            categories.push(category);
+        };
+    } catch(e){
+        alert = ("Something went wrong...try agaion later!");
+        return;
+    }
 
     //hide loading view after requests completed
     hideLoadingView();
