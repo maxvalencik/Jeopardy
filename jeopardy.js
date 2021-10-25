@@ -37,18 +37,22 @@ async function getCategoryIds() {
 
     //Look up for 'numberCat' number of different categories
     let i = 0;
-    while(i < numberCat){
-        //send request to API
-        const res = await axios.get('http://jservice.io/api/random');
-        //extract ID of category
-        let catID = res.data[0].category_id;
-        //test if ID already in array
-        let existingID = categoriesID.find((id) => id === catID);
-        //if catID does not already exist in array, push it
-        if (existingID === undefined){
-            categoriesID.push(catID);
-            i++;
+    try{
+        while(i < numberCat){
+            //send request to API
+            const res = await axios.get('http://jservice.io/api/random');
+            //extract ID of category
+            let catID = res.data[0].category_id;
+            //test if ID already in array - could also use a set instead
+            let existingID = categoriesID.find((id) => id === catID);
+            //if catID does not already exist in array, push it
+            if (existingID === undefined){
+                categoriesID.push(catID);
+                i++;
+            }
         }
+    } catch(e){
+        alert("Something went wrong...try again later!");
     }
     return categoriesID;
 }
@@ -70,38 +74,55 @@ async function getCategory(catId) {
 
     //Array of object clues (numberQuestions) for a given category
     const clues=[];
-    //Object clue
-    const clue = {};
+    
     //Object category
     const category = {};
+    //Category Title
+    let title = '';
+    //new set for random numbers
+    const numbers = new Set();
 
     //Request all the clues for a category
-    let i = 0;
-    while(i < numberQuestions){
-        //get request to API
-        const res = await axios.get(`https://jservice.io/api/random`);
-        //extract title
-        let title = res.data;
-        //extract question
-        let question = res.data;
-        //extract answer
-        let answer = res.data;
-        //test if question already in array
-        let existingQuestion = clues.find((q) => q.question === question);
-        //if question does not already exist in array, push the clue as an object
-        if (existingQuestion === undefined){
+    //get request to API
+    try{
+        const res = await axios.get(`https://jservice.io/api/clues?category=${catId}`);
+
+        //length of data returned (clues)
+        const lengthData = res.data.length;
+    
+        while (numbers.size < 5){ 
+            //Generate unique random numbers within data range
+            let randomNumber = Math.floor(Math.random() * lengthData);
+            //added to the set if unique
+            numbers.add(randomNumber);
+        }
+        
+        //Extract clues data using the set of random numbers to pick random clues in category
+        for (let n of numbers){
+            //extract title of category
+            title = res.data[n].category.title;
+            //Object clue
+            const clue = {};
+            //extract question
+            let question = res.data[n].question;
+            //extract answer
+            let answer = res.data[n].answer;
+            //Assign values to clue
             clue.question = question;
             clue.answer = answer;
+            clue.showing = null;
+            //push clue to clues array
             clues.push(clue);
-            i++;
-        }
+        }      
+
+        //create the category object with title and clues to return 
+        category.title = title;
+        category.clues = clues;
+        return category;
+    } catch(e){
+        alert ("Something went wrong...try again later!");
     }
 
-    //create the category object with title and clues to return 
-    category.title = title;
-    category.clues = clues;
-    category.showing = null;
-    return category;   
 }
 
 
@@ -115,21 +136,24 @@ async function getCategory(catId) {
 
 function fillTable() {
 
+    //Remove existing table if any
+    $('table').remove();
+
     //Add a table to the DOM with 'numberQuestions+1' rows
     $('#container').append('<table></table>');
 
     //Add header to the table
     $('table').append('<tr class="header"></tr>');
-       for (i = 0; i < numberCat; i++){
-            $('.header').append(`<th class="title">${categories[j].title}</th>`);
+       for (let i = 0; i < numberCat; i++){
+            $('.header').append(`<th class="title">${categories[i].title}</th>`);
        }
 
     //Add rows/columns to the table
-    for (i = 0; i < numberQuestions; i++){
+    for (let i = 0; i < numberQuestions; i++){
         $('table').append(`<tr id = "${i}"></tr>`);
-        for (j = 0; j < numberCat; j++){
+        for (let j = 0; j < numberCat; j++){
             //Add ? to all the other cells
-            $(`#row${i}`).append(`<td id = "${i}-${j}">?</td>`);
+            $(`#${i}`).append(`<td class = "clue" column = "${j}">?</td>`);
         }
     }
 }
@@ -146,23 +170,23 @@ function fillTable() {
 function handleClick(evt) {
 
     //get location of cell clicked on the grid
-    const row = (evt.target).parentNode.className;
-    const column = row - (evt.target).className;
+    let row = +(evt.target).parentNode.id; //+ converts to int
+    let column = +(evt.target).getAttribute('column');
 
     //identify category clue: row = category question# and column = category title
-    const question = categories[column].clues[row].question;
-    const answer = categories[column].clues[row].answer;
-    const showing = categories[column].clues[row].showing;
+    let question = categories[column].clues[row].question;
+    let answer = categories[column].clues[row].answer;
+    let showing = categories[column].clues[row].showing;
 
     if (showing === null){
         categories[column].clues[row].showing = 'question';
-        $('evt.target').val(question);
+        $(evt.target).html(question).addClass('question');
     }
     else if (showing === 'question'){
         categories[column].clues[row].showing = 'answer';
-        $('evt.target').val(answer);
+        $(evt.target).html(answer).removeClass('question').addClass('answer');
     }
-    else if (showing === 'answer'){
+    else if (showing === 'answer') {
         return;
     }
 }
@@ -173,13 +197,26 @@ function handleClick(evt) {
  */
 
 function showLoadingView() {
+    //wipe the current Jeopardy board
+    $('table').remove();
+    //show loading spinner (div with class 'loader') to the container instead of the board
+    $('#container').append('<div class="loader"></div>');
 
+    //Disable button and show loading text
+    $('button').prop('disabled', true);
+    $('button').text('Loading...');
 }
 
 
 /** Remove the loading spinner and update the button used to fetch data. */
 
 function hideLoadingView() {
+    //Remove loading spinner
+    $('.loader').remove();
+
+    //Enable button and show fetch text
+    $('button').prop('disabled', false);
+    $('button').text('Play Game!');
 }
 
 
@@ -192,6 +229,9 @@ function hideLoadingView() {
 
 async function setupAndStart() {
 
+    //Loading view while waiting for requests to proceed
+    showLoadingView();
+
     //Get random categories IDs
     const categoriesID = await getCategoryIds();
 
@@ -202,16 +242,18 @@ async function setupAndStart() {
         categories.push(category);
     };
 
+    //hide loading view after requests completed
+    hideLoadingView();
+
     //create HTML table
     fillTable();
 }
 
 
 /** On click of start / restart button, set up game. */
-
-// TODO
+$('button').on('click', setupAndStart);
 
 
 /** On page load, add event handler for clicking clues */
-
-// TODO
+//Add event listener to clues *(chikld on contaiber) only when they are created.
+$('#container').on('click','.clue', handleClick);
