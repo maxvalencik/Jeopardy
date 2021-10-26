@@ -39,7 +39,7 @@ async function getCategoryIds() {
     let i = 0;
     while(i < numberCat){
         //send request to API
-        const res = await axios.get('http://jservice.io/api/random');
+        const res = await axios.get('https://jservice.io/api/random');
         //extract ID of category
          let catID = res.data[0].category_id;
          //test if ID already in array - could also use a set instead
