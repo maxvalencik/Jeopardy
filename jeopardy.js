@@ -224,6 +224,9 @@ async function setupAndStart() {
         //Loading view while waiting for requests to proceed
         showLoadingView();
 
+        //reset categories array
+        categories = [];
+
         //Get random categories IDs
         const categoriesID = await getCategoryIds();
 
